@@ -5,6 +5,8 @@ const asyncHandler = require('./utils/asyncHandler');
 const countryRoutes = require('./routes/countryRoutes');
 const { status } = require('./controllers/countryController');
 const { notFoundHandler, errorHandler } = require('./utils/errorHandler');
+const pool = require('./config/db');
+const { refreshCountries } = require('./services/refreshService');
 
 const app = express();
 app.use(express.json());
@@ -18,10 +20,32 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
+ 
 initDb()
-  .then(() => {
+  .then(async () => {
     console.log('Database ready');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+    // Check whether countries already exist
+    const [rows] = await pool.query(
+      'SELECT COUNT(*) AS total FROM countries'
+    );
+
+    if (rows[0].total === 0) {
+      console.log('Countries table is empty. Starting initial refresh...');
+
+      try {
+        const result = await refreshCountries();
+        console.log('Initial refresh completed:', result);
+      } catch (err) {
+        console.error('Initial refresh failed:', err.message);
+      }
+    } else {
+      console.log(`${rows[0].total} countries already exist. Skipping initial refresh.`);
+    }
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   })
   .catch((err) => {
     console.error('Database setup failed:', err.message);
