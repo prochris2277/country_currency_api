@@ -21,26 +21,31 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 
  
+ 
 initDb()
   .then(async () => {
-    console.log('Database ready');
+    console.log('STEP 1: Database initialized');
 
-    // Check whether countries already exist
     const [rows] = await pool.query(
       'SELECT COUNT(*) AS total FROM countries'
     );
 
-    if (rows[0].total === 0) {
-      console.log('Countries table is empty. Starting initial refresh...');
+    const total = Number(rows[0].total);
+
+    console.log('STEP 2: Current country count:', total);
+
+    if (total === 0) {
+      console.log('STEP 3: Database is empty. Calling refreshCountries...');
 
       try {
         const result = await refreshCountries();
-        console.log('Initial refresh completed:', result);
+
+        console.log('STEP 4: Initial refresh successful:', result);
       } catch (err) {
-        console.error('Initial refresh failed:', err.message);
+        console.error('STEP 4: Initial refresh failed:', err);
       }
     } else {
-      console.log(`${rows[0].total} countries already exist. Skipping initial refresh.`);
+      console.log('STEP 3: Countries already exist. Skipping refresh.');
     }
 
     app.listen(PORT, () => {
@@ -48,6 +53,6 @@ initDb()
     });
   })
   .catch((err) => {
-    console.error('Database setup failed:', err.message);
+    console.error('Database initialization failed:', err);
     process.exit(1);
   });
